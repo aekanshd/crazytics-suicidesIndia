@@ -10,4 +10,17 @@ dataset %>%
   filter(State == "Karnataka") %>%
   head()
 
+newdata <- dataset %>%
+            select(State,Type,Total) %>%
+            group_by(Type) %>%
+            summarise(Died = mean(Total))
+
+deathByLoveAffairs <- dataset %>% 
+                        select(State,Type,Total) %>%
+                        filter(Type == "Love Affairs") %>%
+                        pull(Total)
+
+# Take a mean of the How Many Died
+mean(deathByLoveAffairs)
+
 
