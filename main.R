@@ -8,10 +8,55 @@ library(ggplot2)
 dataset <- read.csv("dataset.csv")
 
 # Select the President, Date, and Approve columns and filter to observations where President is equal to "Trump"
-dataset %>%
+# Select State, Type, and Total Deaths
+selectFew <- dataset %>%
   select(State,Type,Total) %>%
   filter(State == "Karnataka") %>%
   head()
+
+write.csv(selectFew, "selectFew.csv")
+
+dummyEx <- fastDummies::dummy_cols(dataset)
+
+write.csv(dummyEx, "categories_encoded.csv")
+
+womenDied <- dummyEx %>%
+              select(Year, Gender_Female, Total) %>%
+              group_by(Year) %>%
+              summarise(Died = mean(Total))
+ggplot(data = womenDied, aes(x=Year,y=Died)) + 
+  geom_line()
+
+write.csv(womenDied, "womenDied.csv")
+
+normalized<-function(y) {
+  
+  x<-y[!is.na(y)]
+  
+  x<-(x - min(x)) / (max(x) - min(x))
+  
+  y[!is.na(y)]<-x
+  
+  return(y)
+}
+
+womenDiedNorm <- cbind(womenDied[1], apply(womenDied[,ncol(womenDied)],2,normalized))
+
+write.csv(womenDiedNorm, "womenDied_Normalised.csv")
+
+library("ggpubr")
+ggqqplot(womenDiedNorm$Died)
+ggdensity(womenDiedNorm$Died, 
+          main = "Density plot of Women Died",
+          xlab = "Women Died")
+
+shapiro.test(womenDiedNorm$Died)
+
+qqnorm(womenDiedNorm$Died, pch = 1, frame = FALSE)
+qqline(womenDiedNorm$Died, col = "red", lwd = 2)
+
+library("car")
+qqPlot(womenDiedNorm$Died)
 
 newdata <- dataset %>%
             select(State,Type,Total) %>%
