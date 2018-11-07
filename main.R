@@ -6,6 +6,29 @@ library(zoo)
 library(ggplot2)
 
 dataset <- read.csv("dataset.csv")
+# Check for missing values
+apply(dataset, 2, function(x) any(is.na(x)))
+
+# Find out number of entries
+nrow(dataset)
+nrow(dataset[sample(nrow(dataset), 0.1*nrow(dataset)), ])
+
+# take 10% sample
+sampleData <- dataset[sample(nrow(dataset), 0.1*nrow(dataset)), ]
+sampleData <- as.numeric(rownames(NAdata))
+
+# Check for missing values
+dataset[NAdata,5] <- NA
+apply(dataset, 2, function(x) any(is.na(x)))
+
+res<-do.call(cbind,lapply(lapply(dataset[,5:7],
+                                 function(x) data.frame(x)),
+                          function(x) x[sample(1:nrow(x),0.1*nrow(x)),])) 
+dataset[,5][dataset[,5]%in%res[,1]]<-NA 
+dataset[,6][dataset[,6]%in%res[,2]]<-NA 
+dataset[,7][dataset[,7]%in%res[,3]]<-NA 
+head(dataset)  
+
 
 # Select the President, Date, and Approve columns and filter to observations where President is equal to "Trump"
 # Select State, Type, and Total Deaths
