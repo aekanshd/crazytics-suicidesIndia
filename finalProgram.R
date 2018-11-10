@@ -1,3 +1,7 @@
+library(dplyr)
+library(magrittr)
+library(zoo)
+
 dataset <- read.csv("dataset.csv")
 
 # Select State (Karnataka), Type, and Total Deaths
@@ -92,3 +96,103 @@ bp<- ggplot(aggPeopleDied, aes(x="", y=aggPeopleDied$x, fill=aggPeopleDied$Categ
 
 # Plot a pie chart
 pie <- bp + coord_polar("y", start=0)
+
+# Number of students died
+studentsDied <- encodedData %>%
+  select(Year, Type_code, Age_group, Type, Total) %>%
+  filter(Total > 0, Type_code == "Professional_Profile", Type == "Student")
+
+# Number of students died per age grouo
+aggstudentsDied <- as.data.frame(aggregate(studentsDied$Total, by=list(Category=studentsDied$Age_group), FUN=sum))
+
+
+# People that died in the age group of 0-29
+ageWisestudentsDied <- encodedData %>%
+  select(Year, Type_code, Age_group, Type, Total) %>%
+  filter(Total > 0, Age_group == "0-14" | Age_group == "15-29", Type_code == "Causes", Type != "Causes Not known", Type != "Other Causes (Please Specity)")
+
+# Filtered by their causes
+aggAgeWisestudentsDied <- as.data.frame(aggregate(ageWisestudentsDied$Total, by=list(Category=ageWisestudentsDied$Type), FUN=sum))
+
+# Top 5 reasons to commit suicide
+aggAgeWisestudentsDied[order(aggAgeWisestudentsDied$x,decreasing=T)[1:5],]
+
+# People that died in the age group of 0-14
+ageWisestudentsDied2 <- encodedData %>%
+  select(Year, Type_code, Age_group, Type, Total) %>%
+  filter(Total > 0, Age_group == "0-14", Type_code == "Causes", Type != "Causes Not known", Type != "Other Causes (Please Specity)")
+
+# Filtered by their causes
+aggAgeWisestudentsDied2 <- as.data.frame(aggregate(ageWisestudentsDied2$Total, by=list(Category=ageWisestudentsDied2$Type), FUN=sum))
+
+# Top 5 reasons to commit suicide
+aggAgeWisestudentsDied2[order(aggAgeWisestudentsDied2$x,decreasing=T)[1:5],]
+
+# People that died in the age group of 15-29
+ageWisestudentsDied3 <- encodedData %>%
+  select(Year, Type_code, Age_group, Type, Total) %>%
+  filter(Total > 0, Age_group == "15-29", Type_code == "Causes", Type != "Causes Not known", Type != "Other Causes (Please Specity)")
+
+# Filtered by their causes
+aggAgeWisestudentsDied3 <- as.data.frame(aggregate(ageWisestudentsDied3$Total, by=list(Category=ageWisestudentsDied3$Type), FUN=sum))
+
+# Top 5 reasons to commit suicide
+aggAgeWisestudentsDied3[order(aggAgeWisestudentsDied3$x,decreasing=T)[1:5],]
+
+# People that died with Family Problems
+familyProblemsDied <- encodedData %>%
+  select(Year, Type_code, Age_group, Type, Total) %>%
+  filter(Total > 0, Type_code == "Causes", Type == "Family Problems")
+
+# Filtered by their causes
+aggFamilyProblemsDied <- as.data.frame(aggregate(familyProblemsDied$Total, by=list(Category=familyProblemsDied$Year), FUN=sum))
+
+# To test hypothesis
+mutate(percent = Total/sum(Total))
+
+# People that died 
+hyp_died <- encodedData %>%
+  select(Year, Type_code, Age_group, Type, Total) %>%
+  filter(Total > 0, Type_code == "Causes", Type != "Causes Not known", Type != "Other Causes (Please Specity)")
+
+# Filtered by their causes
+agg_hyp_died <- as.data.frame(aggregate(hyp_died$Total, by=list(Category=hyp_died$Type), FUN=sum))
+hyp_grouped <- group_by(hyp_died, Year) %>% group_by(Type)  %>% mutate(Died = Total, TotalDied = sum(Total))
+
+
+# Find total number of deaths by cause
+library(plyr)
+groupColumns = c("Year","Type")
+dataColumns = c("Total")
+res <- ddply(hyp_died, groupColumns, function(x) colSums(x[dataColumns]))
+
+# Total number of suicides per year
+hyp_grouped <- aggregate(res$Total, by=list(Category=res$Year), FUN=sum)
+
+# Add total number of deaths in year to res
+res <- res %>% 
+        rowwise %>% 
+        do({
+          result = as_data_frame(.)
+          result$TotalDied = hyp_grouped[hyp_grouped$Category == result$Year, 2]
+          result
+        })
+
+# Find percentage cause of each suicide.
+res <- res %>% 
+  rowwise %>% 
+  do({
+    result = as_data_frame(.)
+    result$Percentage = (result$Total/(result$TotalDied))*100
+    result
+  })
+
+# Find percentage of suicides by Family Problems each year.
+hyp_familyProblems <- res %>%
+  filter(Total > 0, Type == "Family Problems")
+
+write.csv(hyp_familyProblems, "hyp_familyProblems.csv")
+
+# Use t-test to find out if hypothesis is true or not
+summary(hyp_familyProblems$Percentage)
+t.test(hyp_familyProblems$Percentage, mu = 30, alternative = "less")
